@@ -13,7 +13,7 @@ const hostname = "0.0.0.0";
 
 const uri = process.env.MONGODB_URI;
 if (!uri) {
-    console.error("❌ MONGODB_URI missing. Check .env.local");
+    console.error("❌ MONGODB_URI missing.");
     process.exit(1);
 }
 
@@ -29,8 +29,8 @@ clientPromise = global._mongoClientPromise;
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
-// TRACK ONLINE USERS
-const onlineUsers = new Set();
+// 1. TRACK USERS EXPLICITLY (Map: Username -> SocketID)
+const onlineUsers = {};
 
 app.prepare().then(() => {
     const httpServer = createServer((req, res) => {
@@ -42,43 +42,64 @@ app.prepare().then(() => {
     });
 
     io.on("connection", (socket) => {
-        // 1. Register User
+
+        // Helper to update everyone's list
+        const broadcastOnlineList = () => {
+            io.emit("online-users", Object.keys(onlineUsers));
+        };
+
+        // 2. REGISTER (Store Socket ID)
         socket.on("register-user", (username) => {
+            onlineUsers[username] = socket.id; // Map Name -> ID
             socket.username = username;
-            socket.join(username);
 
-            onlineUsers.add(username);
-            io.emit("online-users", Array.from(onlineUsers));
-
-            console.log(`👤 User '${username}' connected.`);
+            console.log(`👤 Registered: ${username} (ID: ${socket.id})`);
+            broadcastOnlineList();
         });
 
-        // 2. Handshake Packet
+        // 3. HANDSHAKE (Send strictly to Recipient's Socket ID)
         socket.on("handshake_packet", ({ to, capsule }) => {
-            io.to(to).emit("handshake_received", {
-                from: socket.username,
-                capsule: capsule
-            });
+            const recipientSocketId = onlineUsers[to];
+
+            if (recipientSocketId) {
+                console.log(`🤝 Handshake: ${socket.username} -> ${to} (ID: ${recipientSocketId})`);
+                io.to(recipientSocketId).emit("handshake_received", {
+                    from: socket.username,
+                    capsule: capsule
+                });
+            } else {
+                console.log(`⚠️ Handshake failed: User ${to} is offline.`);
+            }
         });
 
-        // 3. Message Packet (Forwarding Capsule for History)
+        // 4. MESSAGE (Send strictly to Recipient's Socket ID)
         socket.on("send-message", ({ to, packet, capsule }) => {
-            console.log(`📩 Relay msg from ${socket.username} -> ${to}`);
+            const recipientSocketId = onlineUsers[to];
 
-            io.to(to).emit("receive-message", {
-                from: socket.username,
-                packet: packet,
-                capsule: capsule,
-                time: new Date().toISOString()
-            });
+            // A. Send to Recipient (If Online)
+            if (recipientSocketId) {
+                console.log(`📩 Message: ${socket.username} -> ${to} (ID: ${recipientSocketId})`);
+                io.to(recipientSocketId).emit("receive-message", {
+                    from: socket.username,
+                    to: to,           // Explicitly say who it is for
+                    packet: packet,
+                    capsule: capsule,
+                    time: new Date().toISOString()
+                });
+            } else {
+                console.log(`⚠️ Message saved but ${to} is offline.`);
+            }
+
+            // B. Send confirmation back to Sender (Optional, useful for UI updates if you rely on socket echo)
+            // But usually, sender updates UI locally immediately. 
         });
 
-        // 4. Disconnect
+        // 5. DISCONNECT
         socket.on("disconnect", () => {
             if (socket.username) {
-                onlineUsers.delete(socket.username);
-                io.emit("online-users", Array.from(onlineUsers));
-                console.log(`❌ User '${socket.username}' disconnected.`);
+                delete onlineUsers[socket.username];
+                console.log(`❌ Disconnected: ${socket.username}`);
+                broadcastOnlineList();
             }
         });
     });

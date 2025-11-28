@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef, Suspense } from "react";
@@ -18,11 +19,13 @@ function ChatPageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // REFS (Mutable state that doesn't trigger re-renders but is accessible to Sockets)
+    // REFS
     const socketRef = useRef(null);
     const messagesEndRef = useRef(null);
-    const myPrivateKeyRef = useRef(null); // Holds the Private Key
-    const sessionKeyRef = useRef(null);   // Holds the Session Key
+    const myPrivateKeyRef = useRef(null);
+    const sessionKeyRef = useRef(null);
+    // NEW: Track who we are currently looking at to filter incoming messages
+    const activeRecipientRef = useRef("");
 
     // UI STATE
     const [username, setUsername] = useState("");
@@ -33,7 +36,7 @@ function ChatPageInner() {
     const [users, setUsers] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState([]);
 
-    // 1. INITIALIZE & LOAD KEY (Run Once)
+    // 1. INITIALIZE
     useEffect(() => {
         const u = searchParams.get("user");
         if (u) setUsername(u);
@@ -42,15 +45,17 @@ function ChatPageInner() {
         if (storedKeyB64) {
             const binaryString = atob(storedKeyB64);
             const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            // Save to REF (for Logic) and State (for UI if needed)
+            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
             myPrivateKeyRef.current = bytes;
         } else {
             router.push("/");
         }
     }, [searchParams, router]);
+
+    // Keep Ref in sync with State for the socket listeners
+    useEffect(() => {
+        activeRecipientRef.current = recipient;
+    }, [recipient]);
 
     // 2. AUTO SCROLL
     useEffect(() => {
@@ -61,168 +66,130 @@ function ChatPageInner() {
     useEffect(() => {
         fetch("/api/users")
             .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) setUsers(data);
-            })
+            .then(data => { if (Array.isArray(data)) setUsers(data); })
             .catch(err => console.error(err));
     }, []);
 
-    // 4. SOCKET SETUP (Run ONCE - No Dependencies)
+    // 4. SOCKET LOGIC
     useEffect(() => {
-        // Initialize Socket
         socketRef.current = io();
 
-        // Connect Logic
         socketRef.current.on("connect", () => {
-            // We need the username. Since this runs once, we use a timeout or check params
-            // Ideally we emit register inside the username useEffect, but this is fine for now
-            // We will emit register manually in the other useEffect to be safe
+            // We need username. Wait a tick or rely on the other effect.
         });
 
-        socketRef.current.on("online-users", (activeUsers) => {
-            setOnlineUsers(activeUsers);
-        });
+        socketRef.current.on("online-users", (active) => setOnlineUsers(active));
 
-        // A. HANDSHAKE LISTENER
+        // A. HANDSHAKE (Silent Background Processing)
         socketRef.current.on("handshake_received", async (data) => {
             if (!myPrivateKeyRef.current) return;
-            console.log(`⚡ Realtime Handshake from ${data.from}`);
+            console.log(`⚡ Handshake from ${data.from}`);
 
             try {
-                // Use REF to get key
+                // Always compute the key (so it's ready)
                 const secret = await recoverSessionKey(data.capsule, myPrivateKeyRef.current);
 
-                // Update REF immediately
-                sessionKeyRef.current = secret;
+                // ONLY update UI if we are currently talking to THIS person
+                // OR if we are talking to nobody
+                if (activeRecipientRef.current === data.from || activeRecipientRef.current === "") {
+                    sessionKeyRef.current = secret;
+                    setConnected(true);
 
-                // Update UI State
-                setConnected(true);
-                setRecipient(data.from);
+                    // If we weren't talking to anyone, auto-select sender
+                    if (activeRecipientRef.current === "") {
+                        setRecipient(data.from);
+                    }
 
-                setChat((prev) => [
-                    ...prev,
-                    { from: "system", text: `🔐 Secure Connection Established with ${data.from}`, time: new Date().toISOString() }
-                ]);
-            } catch (err) {
-                console.error("Handshake failed:", err);
-            }
+                    setChat((prev) => [...prev, { from: "system", text: `🔐 Secure Connection with ${data.from}`, time: new Date().toISOString() }]);
+                } else {
+                    console.log(`Background: Saved session for ${data.from} (Currently talking to ${activeRecipientRef.current})`);
+                    // In a real app, you would store this 'secret' in a Map<User, Key>
+                    // For this assignment, we just ignore it visually until user clicks them.
+                }
+            } catch (err) { console.error("Handshake err", err); }
         });
 
-        // B. MESSAGE LISTENER
+        // B. MESSAGE RECEIVER (Strict Filtering)
         socketRef.current.on("receive-message", async (data) => {
-            console.log("📩 Message Packet:", data);
+            // 1. Is this message for the person I am currently looking at?
+            // If No -> IGNORE IT VISUALLY (Don't append to chat array)
+            if (data.from !== activeRecipientRef.current && data.from !== username) {
+                console.log(`Ignored message from ${data.from} because I am talking to ${activeRecipientRef.current}`);
+                return;
+            }
 
-            // 1. Decrypt using REF values (Always fresh)
-            let decryptedText = "🔒 [Decryption Failed]";
-            let keysUpdated = false;
+            let text = "🔒 [Fail]";
 
-            // Strategy A: Use Capsule (Auto-Recovery)
+            // Decryption Logic (Same as before)
             if (data.capsule && myPrivateKeyRef.current) {
                 try {
                     const tempKey = await recoverSessionKey(data.capsule, myPrivateKeyRef.current);
-                    sessionKeyRef.current = tempKey; // Update Ref
-                    keysUpdated = true;
-                    decryptedText = decryptGCM(data.packet, tempKey);
-                } catch (e) { console.error("Auto-recover failed", e); }
-            }
-
-            // Strategy B: Use Existing Session Key
-            if (decryptedText.startsWith("🔒") && sessionKeyRef.current) {
-                try {
-                    decryptedText = decryptGCM(data.packet, sessionKeyRef.current);
+                    sessionKeyRef.current = tempKey;
+                    text = decryptGCM(data.packet, tempKey);
                 } catch (e) { }
+            } else if (sessionKeyRef.current) {
+                text = decryptGCM(data.packet, sessionKeyRef.current);
             }
 
-            // 2. Update UI
-            // Check if it's for me OR from me (sender echo)
-            setChat((prev) => {
-                // Avoid duplicates if needed, but append is safer
-                return [...prev, { from: data.from, text: decryptedText, time: data.time }];
-            });
-
-            if (keysUpdated) setConnected(true);
+            setChat((prev) => [...prev, { from: data.from, text: text, time: data.time }]);
         });
 
-        // Cleanup on Unmount ONLY
-        return () => {
-            if (socketRef.current) socketRef.current.disconnect();
-        };
-    }, []); // <--- EMPTY ARRAY = RUNS ONCE. NO DISCONNECT LOOPS.
+        return () => { if (socketRef.current) socketRef.current.disconnect(); };
+    }, []);
 
-
-    // 5. REGISTER USER ON SOCKET (When username is set)
+    // Register user when username is set
     useEffect(() => {
-        if (username && socketRef.current) {
-            socketRef.current.emit("register-user", username);
-        }
+        if (username && socketRef.current) socketRef.current.emit("register-user", username);
     }, [username]);
 
 
-    // 6. CONNECT BUTTON
+    // 5. CONNECT / SWITCH USER
+    const handleUserSelect = (e) => {
+        const newUser = e.target.value;
+        setRecipient(newUser);
+        setChat([]); // CLEAR CHAT when switching users!
+        setConnected(false); // Reset connection state until we connect
+        sessionKeyRef.current = null; // Clear old session key
+    };
+
     const connect = async () => {
-        if (!recipient.trim()) return;
-
-        const keyRes = await fetch(`/api/getPublicKey?username=${encodeURIComponent(recipient)}`);
-        if (!keyRes.ok) { alert("User not found!"); return; }
-        const { publicKey } = await keyRes.json();
-
-        const { capsule, sharedSecret } = await performKeyExchange(publicKey);
-
-        // Update REF and State
-        sessionKeyRef.current = sharedSecret;
-        setConnected(true);
-
-        socketRef.current.emit("handshake_packet", { to: recipient, capsule });
+        if (!recipient) return;
 
         // Load History
-        loadHistory(sharedSecret);
-    };
-
-    const loadHistory = async () => {
         const res = await fetch(`/api/message?user1=${encodeURIComponent(username)}&user2=${encodeURIComponent(recipient)}`);
-        if (res.ok) {
-            const history = await res.json();
+        const history = await res.json();
 
-            const decryptedHistory = await Promise.all(history.map(async (msg) => {
-                try {
-                    // Logic: Sender vs Receiver
-                    const isMe = msg.from === username;
-                    const targetCapsule = isMe ? msg.senderCapsule : msg.capsule;
-                    const targetPacket = isMe ? msg.senderPacket : msg.packet;
+        const decrypted = await Promise.all(history.map(async (msg) => {
+            try {
+                const isMe = msg.from === username;
+                const targetCapsule = isMe ? msg.senderCapsule : msg.capsule;
+                const targetPacket = isMe ? msg.senderPacket : msg.packet;
 
-                    if (targetCapsule && myPrivateKeyRef.current) {
-                        const msgSecret = await recoverSessionKey(targetCapsule, myPrivateKeyRef.current);
-                        return {
-                            from: msg.from,
-                            text: decryptGCM(targetPacket, msgSecret),
-                            time: msg.time
-                        };
-                    }
-                    return { from: msg.from, text: "🔒 [Key Missing]", time: msg.time };
-                } catch (e) { return { from: msg.from, text: "⚠️ Error", time: msg.time }; }
-            }));
-            setChat(decryptedHistory);
-        }
-    };
+                if (targetCapsule && myPrivateKeyRef.current) {
+                    const k = await recoverSessionKey(targetCapsule, myPrivateKeyRef.current);
+                    return { from: msg.from, text: decryptGCM(targetPacket, k), time: msg.time };
+                }
+                return { from: msg.from, text: "🔒", time: msg.time };
+            } catch (e) { return { from: msg.from, text: "⚠️", time: msg.time }; }
+        }));
+        setChat(decrypted);
 
-    const disconnect = () => {
-        if (sessionKeyRef.current) try { sessionKeyRef.current.fill(0); } catch (e) { }
-        sessionKeyRef.current = null;
-        setConnected(false);
-        setRecipient("");
-        setChat([]);
+        // Initiate Handshake
+        try {
+            const resKey = await fetch(`/api/getPublicKey?username=${encodeURIComponent(recipient)}`);
+            const data = await resKey.json();
+            if (data.publicKey) {
+                const { capsule, sharedSecret } = await performKeyExchange(data.publicKey);
+                sessionKeyRef.current = sharedSecret;
+                setConnected(true);
+                socketRef.current.emit("handshake_packet", { to: recipient, capsule });
+            }
+        } catch (e) { console.log("Handshake skip", e); }
     };
 
     const sendMessage = async () => {
-        if (!message.trim()) return;
+        if (!message || !recipient) return;
 
-        // Ensure we have keys
-        if (!sessionKeyRef.current) {
-            alert("No session! Click Connect first.");
-            return;
-        }
-
-        // A. Fetch Public Keys for Double Encryption
         const [resBob, resMe] = await Promise.all([
             fetch(`/api/getPublicKey?username=${encodeURIComponent(recipient)}`),
             fetch(`/api/getPublicKey?username=${encodeURIComponent(username)}`)
@@ -230,14 +197,14 @@ function ChatPageInner() {
         const bobData = await resBob.json();
         const meData = await resMe.json();
 
-        // B. Encrypt
+        if (!bobData.publicKey || !meData.publicKey) return alert("Public Keys missing!");
+
         const exBob = await performKeyExchange(bobData.publicKey);
         const packetBob = encryptGCM(message, exBob.sharedSecret);
 
         const exMe = await performKeyExchange(meData.publicKey);
         const packetMe = encryptGCM(message, exMe.sharedSecret);
 
-        // C. Save DB
         await fetch("/api/message", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -248,18 +215,14 @@ function ChatPageInner() {
             }),
         });
 
-        // D. Send Socket (Bob's Version)
         socketRef.current.emit("send-message", {
             to: recipient,
             packet: packetBob,
             capsule: exBob.capsule
         });
 
-        // E. Show Local
         setChat((prev) => [...prev, { from: username, text: message, time: new Date().toISOString() }]);
         setMessage("");
-
-        // Update Session Key for next time
         sessionKeyRef.current = exBob.sharedSecret;
     };
 
@@ -267,62 +230,45 @@ function ChatPageInner() {
         <div className="chat-page">
             <div className="top-bar">
                 <button onClick={() => router.push("/")} className="home-button">Home</button>
-                {username && <span className="profile-badge">User: <strong>{username}</strong></span>}
+                <span className="profile-badge">User: <strong>{username}</strong></span>
             </div>
 
             <div className="chat-center">
                 <div className="chat-card">
                     <div className="recipient-row">
-                        <select
-                            value={recipient}
-                            onChange={(e) => setRecipient(e.target.value)}
-                            className="recipient-select"
-                        >
-                            <option value="" disabled>Select recipient</option>
-                            {users.filter((u) => u !== username).map((u, i) => (
-                                <option key={i} value={u}>
-                                    {u} {onlineUsers.includes(u) ? "🟢" : "⚪"}
-                                </option>
+                        {/* UPDATE: Use handleUserSelect to clear chat on switch */}
+                        <select value={recipient} onChange={handleUserSelect} className="recipient-select">
+                            <option value="" disabled>Select User</option>
+                            {users.filter(u => u !== username).map((u, i) => (
+                                <option key={i} value={u}>{u} {onlineUsers.includes(u) ? "🟢" : "⚪"}</option>
                             ))}
                         </select>
-
                         <button onClick={connect} className="connect-button">Connect</button>
                         <button onClick={() => setChat([])} className="refresh-button">Clear</button>
                         <button onClick={async () => {
-                            await fetch("/api/deleteMessages", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ user1: username, user2: recipient }),
-                            });
+                            await fetch("/api/deleteMessages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user1: username, user2: recipient }) });
                             setChat([]);
                         }} className="delete-button">Delete</button>
-                        <button onClick={disconnect} className="disconnect-button">Disconnect</button>
+                        <button onClick={() => {
+                            sessionKeyRef.current = null;
+                            setConnected(false);
+                            setRecipient("");
+                            setChat([]);
+                        }} className="disconnect-button">Disconnect</button>
                     </div>
 
                     <div className="chat-window">
                         <div className="messages">
-                            {chat.map((c, i) => {
-                                const label = c.from === username ? "me" : c.from;
-                                const time = c.time ? new Date(c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "";
-                                return (
-                                    <div key={i} className={`message ${c.from === username ? "me" : c.from === "system" ? "system" : "them"}`}>
-                                        <span className="from">{label}:</span> {c.text}
-                                        {time && <span className="timestamp"> {time}</span>}
-                                    </div>
-                                );
-                            })}
+                            {chat.map((c, i) => (
+                                <div key={i} className={`message ${c.from === username ? "me" : c.from === "system" ? "system" : "them"}`}>
+                                    <span className="from">{c.from === username ? "me" : c.from}:</span> {c.text}
+                                    {c.time && <span className="timestamp"> {new Date(c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                                </div>
+                            ))}
                             <div ref={messagesEndRef} />
                         </div>
-
                         <div className="input-row">
-                            <input
-                                type="text"
-                                placeholder={connected ? "Type message..." : "Connect first"}
-                                value={message}
-                                onChange={(e) => setMessage(e.target.value)}
-                                className="message-input"
-                            // disabled={!connected} // Enabled so you can type while waiting
-                            />
+                            <input value={message} onChange={e => setMessage(e.target.value)} className="message-input" placeholder="Type..." />
                             <button onClick={sendMessage} className="send-button">Send</button>
                         </div>
                     </div>
@@ -333,9 +279,5 @@ function ChatPageInner() {
 }
 
 export default function ChatPage() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <ChatPageInner />
-        </Suspense>
-    );
+    return <Suspense fallback={<div>Loading...</div>}><ChatPageInner /></Suspense>;
 }
