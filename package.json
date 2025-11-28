@@ -2,15 +2,21 @@
   "name": "cryptochat1",
   "version": "0.1.1",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node server.js",
     "build": "next build",
-    "start": "next start"
+    "start": "NODE_ENV=production node server.js"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
+    "mlkem": "^2.5.0",
+    "mongodb": "^7.0.0",
     "next": "16.0.5",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "babel-plugin-react-compiler": "1.0.0"

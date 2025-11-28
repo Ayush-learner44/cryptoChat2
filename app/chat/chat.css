@@ -1,0 +1,244 @@
+/* app/chat/chat.css - Final Polish */
+
+.chat-page {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f0f2f5;
+    font-family: system-ui, -apple-system, sans-serif;
+    padding: 1rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.top-bar {
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.home-button {
+    background-color: #374151;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.profile-badge {
+    background: #ffffff;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    color: #111827;
+    border: 1px solid #d1d5db;
+    font-weight: 500;
+}
+
+/* MAIN CARD */
+.chat-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 800px;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+/* CONTROLS */
+.recipient-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+    align-items: center;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.recipient-select {
+    flex-grow: 10;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: white;
+    color: #000000;
+    min-width: 160px;
+    height: 38px;
+}
+
+.connect-button,
+.refresh-button,
+.delete-button,
+.disconnect-button {
+    border: none;
+    border-radius: 6px;
+    padding: 0 0.8rem;
+    height: 38px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    white-space: nowrap;
+    text-align: center;
+    flex-grow: 1;
+}
+
+.connect-button {
+    background: #2563eb;
+}
+
+.refresh-button {
+    background: #f59e0b;
+}
+
+.delete-button {
+    background: #ef4444;
+}
+
+.disconnect-button {
+    background: #4b5563;
+}
+
+/* CHAT AREA */
+.chat-window {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background-color: #f9fafb;
+}
+
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    /* Remove gap to let borders touch if desired, or keep small */
+}
+
+/* MESSAGE BUBBLES + SEPARATORS */
+.message {
+    padding: 10px;
+    margin-bottom: 5px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    word-wrap: break-word;
+    /* THE LINE YOU LIKED */
+    border-bottom: 1px dashed #e5e7eb;
+}
+
+.message:last-child {
+    border-bottom: none;
+    /* No line on last message */
+}
+
+.message.me {
+    text-align: right;
+    color: #1e3a8a;
+    /* Dark Blue Text */
+    background: transparent;
+    /* Remove bubble bg to look like "barebones" list */
+}
+
+.message.them {
+    text-align: left;
+    color: #065f46;
+    /* Dark Green Text */
+    background: transparent;
+}
+
+.message.system {
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+    font-size: 0.8rem;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 5px;
+}
+
+.from {
+    font-weight: bold;
+    margin-right: 5px;
+    color: #111827;
+}
+
+.timestamp {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    margin-left: 8px;
+}
+
+/* INPUT */
+.input-row {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.8rem;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.message-input {
+    flex: 1;
+    padding: 0.7rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1rem;
+    color: #000000;
+}
+
+.send-button {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 0 1.2rem;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* MOBILE */
+@media (max-width: 600px) {
+    .chat-page {
+        padding: 0.5rem;
+        height: 100dvh;
+    }
+
+    .chat-card {
+        height: 100%;
+        border-radius: 8px;
+    }
+
+    .recipient-row {
+        gap: 0.4rem;
+    }
+
+    .recipient-select {
+        width: 100%;
+        flex-basis: 100%;
+    }
+
+    .connect-button,
+    .refresh-button,
+    .delete-button,
+    .disconnect-button {
+        flex: 1 1 48%;
+        font-size: 0.8rem;
+    }
+}

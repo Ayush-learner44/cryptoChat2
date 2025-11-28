@@ -1,0 +1,137 @@
+/* app/register/register.css */
+
+.page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f2f5;
+    /* Light Gray */
+    font-family: system-ui, -apple-system, sans-serif;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.card {
+    background: #ffffff;
+    padding: 2.5rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    border: 1px solid #e5e7eb;
+}
+
+/* TEXT */
+.title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    /* Pitch Black */
+    margin: 0;
+    line-height: 1.2;
+}
+
+.subtitle {
+    font-size: 1rem;
+    color: #4b5563;
+    /* Dark Gray */
+    margin-top: -1rem;
+    font-weight: 500;
+}
+
+/* FORM ELEMENTS */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    gap: 0.5rem;
+}
+
+.label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+    /* Dark Gray Label */
+    margin-left: 2px;
+}
+
+.input {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #1a1a1a;
+    /* Dark Text */
+    background: #f8fafc;
+    box-sizing: border-box;
+    /* Fix padding issues */
+    transition: all 0.2s;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    /* Blue Focus */
+    background: #ffffff;
+}
+
+.input::placeholder {
+    color: #9ca3af;
+    /* Visible Placeholder */
+}
+
+/* BUTTON */
+.button {
+    width: 100%;
+    padding: 0.9rem;
+    background-color: #3b82f6;
+    /* Blue */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.button:hover {
+    background-color: #2563eb;
+    /* Darker Blue */
+}
+
+.button:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* EXTRAS */
+.error {
+    background: #fee2e2;
+    color: #dc2626;
+    /* Red */
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid #fecaca;
+}
+
+.link {
+    color: #3b82f6;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    margin-top: 0.5rem;
+}
+
+.link:hover {
+    text-decoration: underline;
+}

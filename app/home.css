@@ -1,0 +1,138 @@
+/* app/home.css */
+
+.page {
+  min-height: 100vh;
+  min-width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f2f5;
+  /* Light Gray Background */
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.card {
+  background: #ffffff;
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+/* TEXT */
+.title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  /* Pitch Black */
+  margin: 0;
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: #4b5563;
+  /* Dark Gray */
+  margin-top: -1rem;
+  font-weight: 500;
+}
+
+/* UPLOAD BOX */
+.upload-section {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 2rem 1rem;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.upload-section:hover {
+  border-color: #3b82f6;
+  /* Blue border on hover */
+  background: #eff6ff;
+}
+
+.upload-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  /* Dark Text */
+  cursor: pointer;
+}
+
+.file-input {
+  font-size: 0.9rem;
+  color: #64748b;
+  width: 100%;
+}
+
+/* ERROR MESSAGE */
+.error {
+  background: #fee2e2;
+  color: #dc2626;
+  /* Red Text */
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid #fecaca;
+}
+
+/* DIVIDER */
+.divider {
+  display: flex;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 500;
+  width: 100%;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.divider::before {
+  margin-right: 1rem;
+}
+
+.divider::after {
+  margin-left: 1rem;
+}
+
+/* BUTTONS */
+.outline-button {
+  width: 100%;
+  padding: 0.9rem;
+  background: transparent;
+  border: 2px solid #3b82f6;
+  /* Blue Border */
+  color: #3b82f6;
+  /* Blue Text */
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.outline-button:hover {
+  background: #3b82f6;
+  color: white;
+}
