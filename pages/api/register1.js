@@ -1,5 +1,4 @@
 import { MongoClient } from "mongodb";
-import bcrypt from "bcryptjs"; // Import bcrypt
 
 const uri = process.env.MONGODB_URI;
 let client;
@@ -14,15 +13,17 @@ clientPromise = global._mongoClientPromise;
 export default async function handler(req, res) {
     try {
         const client = await clientPromise;
-        const db = client.db("chatapp");
+        const db = client.db("chatapp"); // Database Name
         const users = db.collection("users");
 
         if (req.method === "POST") {
-            const { username, password, publicKey } = req.body;
+            const { username, publicKey } = req.body;
 
-            // 1. Validate inputs
-            if (!username || !password || !publicKey) {
-                return res.status(400).json({ message: "Missing fields" });
+            if (!username || !username.trim()) {
+                return res.status(400).json({ message: "Username required" });
+            }
+            if (!publicKey) {
+                return res.status(400).json({ message: "Public Key required" });
             }
 
             const existing = await users.findOne({ username });
@@ -30,14 +31,8 @@ export default async function handler(req, res) {
                 return res.status(400).json({ message: "Username already exists" });
             }
 
-            // 2. Hash the Password
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
-
-            // 3. Save User (Username + Hash + Public Key)
             await users.insertOne({
                 username,
-                password: hashedPassword, // Save Hash, NOT plain text
                 publicKey,
                 createdAt: new Date()
             });

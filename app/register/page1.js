@@ -2,19 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { generateIdentity } from "../../utils/crypto";
+import { generateIdentity } from "../../utils/crypto"; // Ensure path is correct
 import "./register.css";
 
 export default function RegisterPage() {
     const router = useRouter();
     const [username, setUsername] = useState("");
-    const [password, setPassword] = useState(""); // <--- NEW STATE
     const [error, setError] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
 
     const handleRegister = async () => {
-        if (!username.trim() || !password.trim()) { // <--- CHECK BOTH
-            setError("Please enter username and password");
+        if (!username.trim()) {
+            setError("Please enter a username");
             return;
         }
         setIsProcessing(true);
@@ -24,14 +23,13 @@ export default function RegisterPage() {
             // 1. Generate Keys (Client-Side)
             const { publicKey, privateKey } = await generateIdentity();
 
-            // 2. Upload Public Key AND Password
+            // 2. Upload ONLY Public Key to Server
             const res = await fetch("/api/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     username,
-                    password, // <--- SEND PASSWORD
-                    publicKey
+                    publicKey: publicKey
                 }),
             });
 
@@ -46,7 +44,8 @@ export default function RegisterPage() {
                 a.click();
                 document.body.removeChild(a);
 
-                alert(`SUCCESS!\n\nUser '${username}' registered.\nKey file downloaded.`);
+                alert(`SUCCESS!\n\nUser '${username}' registered.\nWe have downloaded your private key file.\n\nKeep this file safe! You need it to login.`);
+
                 router.push("/");
             } else {
                 const data = await res.json();
@@ -63,28 +62,16 @@ export default function RegisterPage() {
     return (
         <div className="page">
             <div className="card">
-                <h1 className="title">Register</h1>
+                <h1 className="title">Create Identity</h1>
                 <p className="subtitle">Secure Post-Quantum Registration</p>
 
                 <div className="form-group">
-
+                    <label className="label">Username</label>
                     <input
                         type="text"
-                        placeholder="Username"
+                        placeholder="e.g. alice"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        className="input"
-                        disabled={isProcessing}
-                    />
-                </div>
-
-                {/* NEW PASSWORD INPUT */}
-                <div className="form-group">
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
                         className="input"
                         disabled={isProcessing}
                     />

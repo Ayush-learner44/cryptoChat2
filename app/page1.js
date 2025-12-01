@@ -9,21 +9,17 @@ export default function HomePage() {
 
     // State for inputs
     const [username, setUsername] = useState("");
-    const [password, setPassword] = useState(""); // <--- NEW STATE
     const [keyFileBytes, setKeyFileBytes] = useState(null);
-    const [fileName, setFileName] = useState("");
+    const [fileName, setFileName] = useState(""); // Just for display
     const [error, setError] = useState("");
 
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
-        setFileName(file.name);
+        setFileName(file.name); // Show user which file they picked
 
-        // Auto-fill username from filename if empty
-        const inferredName = file.name.split('_')[0];
-        if (inferredName && !username) setUsername(inferredName);
-
+        // Read the file into memory
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
@@ -32,6 +28,7 @@ export default function HomePage() {
                     setError("Error: Key file is empty.");
                     return;
                 }
+                // Save the raw bytes to state (waiting for Login click)
                 const bytes = new Uint8Array(arrayBuffer);
                 setKeyFileBytes(bytes);
                 setError("");
@@ -43,14 +40,9 @@ export default function HomePage() {
         reader.readAsArrayBuffer(file);
     };
 
-    const handleLogin = async () => {
-        // 1. Basic Validation
+    const handleLogin = () => {
         if (!username.trim()) {
             setError("Please enter your username.");
-            return;
-        }
-        if (!password.trim()) {
-            setError("Please enter your password.");
             return;
         }
         if (!keyFileBytes) {
@@ -58,40 +50,27 @@ export default function HomePage() {
             return;
         }
 
-        // 2. Verify Password on Server
+        // SUCCESS: Store Identity in Session and Redirect
         try {
-            const res = await fetch("/api/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password }) // Send password
-            });
-
-            if (!res.ok) {
-                const data = await res.json();
-                setError(data.message || "Login failed");
-                return;
-            }
-
-            // 3. If Password Correct -> Proceed with Key File Logic
             const base64Key = Buffer.from(keyFileBytes).toString('base64');
             sessionStorage.setItem("chat_session_key", base64Key);
 
+            // Redirect to the username you TYPED
             router.push(`/chat?user=${username.trim()}`);
-
         } catch (e) {
-            console.error(e);
-            setError("Connection error during login.");
+            setError("Login processing failed.");
         }
     };
 
     return (
         <div className="page">
             <div className="card">
-                <h1 className="title">Welcome</h1>
+                <h1 className="title">PQC Chat Login</h1>
+                <p className="subtitle">Secure Identity Access</p>
 
-
-                {/* USERNAME */}
+                {/* 1. USERNAME INPUT */}
                 <div className="input-group">
+
                     <input
                         type="text"
                         placeholder="Username"
@@ -101,34 +80,36 @@ export default function HomePage() {
                     />
                 </div>
 
-                {/* PASSWORD (NEW) */}
+                {/* 2. FILE UPLOAD */}
                 <div className="input-group">
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="text-input"
-                        style={{ marginTop: '10px' }}
-                    />
-                </div>
-
-                {/* FILE UPLOAD */}
-                <div className="input-group" style={{ marginTop: '10px' }}>
                     <label className="input-label">Private Key File</label>
+
+                    {/* Custom File Button Styling */}
                     <div className="file-upload-wrapper">
-                        <input type="file" accept=".key" id="file-upload" onChange={handleFileUpload} className="hidden-file-input" />
+                        <input
+                            type="file"
+                            accept=".key"
+                            id="file-upload"
+                            onChange={handleFileUpload}
+                            className="hidden-file-input"
+                        />
                         <label htmlFor="file-upload" className="file-upload-button">
-                            {fileName ? "📄 " + fileName : "📂 Upload Key"}
+                            {fileName ? "📄 " + fileName : "📂 Click to Upload Key"}
                         </label>
                     </div>
                 </div>
 
                 {error && <p className="error">{error}</p>}
 
-                <button onClick={handleLogin} className="primary-button">Login</button>
+                <button onClick={handleLogin} className="primary-button">
+                    Login to Chat
+                </button>
+
                 <div className="divider">or</div>
-                <button onClick={() => window.location.href = "/register"} className="outline-button">Register</button>
+
+                <button onClick={() => router.push("/register")} className="outline-button">
+                    Create New Identity
+                </button>
             </div>
         </div>
     );

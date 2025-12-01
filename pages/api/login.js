@@ -1,4 +1,5 @@
 import { MongoClient } from "mongodb";
+import bcrypt from "bcryptjs";
 
 const uri = process.env.MONGODB_URI;
 let client;
@@ -11,38 +12,32 @@ if (!global._mongoClientPromise) {
 clientPromise = global._mongoClientPromise;
 
 export default async function handler(req, res) {
-    try {
-        const client = await clientPromise;
-        const db = client.db("chatapp"); // Database Name
-        const users = db.collection("users");
+    const client = await clientPromise;
+    const db = client.db("chatapp");
+    const users = db.collection("users");
 
-        if (req.method === "POST") {
-            const { username, publicKey } = req.body;
+    if (req.method === "POST") {
+        const { username, password } = req.body;
 
-            if (!username || !username.trim()) {
-                return res.status(400).json({ message: "Username required" });
-            }
-            if (!publicKey) {
-                return res.status(400).json({ message: "Public Key required" });
-            }
-
-            const existing = await users.findOne({ username });
-            if (existing) {
-                return res.status(400).json({ message: "Username already exists" });
-            }
-
-            await users.insertOne({
-                username,
-                publicKey,
-                createdAt: new Date()
-            });
-
-            return res.status(200).json({ message: "User registered successfully" });
+        if (!username || !password) {
+            return res.status(400).json({ message: "Username and Password required" });
         }
 
-        res.status(405).json({ message: "Method not allowed" });
-    } catch (e) {
-        console.error("Register API error:", e);
-        res.status(500).json({ message: "Internal server error" });
+        // 1. Find User
+        const user = await users.findOne({ username });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // 2. Check Password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: "Invalid Password" });
+        }
+
+        // 3. Success
+        return res.status(200).json({ message: "Login successful" });
     }
+
+    res.status(405).json({ message: "Method not allowed" });
 }

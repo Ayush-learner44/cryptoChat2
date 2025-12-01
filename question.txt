@@ -1,0 +1,11 @@
+LAB_ASSIGNMENT-5:-
+
+Convert your private messaging app which you designed in Assignment-3 to post-quantum secure. Use liboqs library for this purpose. Each message communicated must be encrypted using AES by a session-key which again will be encapsulated by KEM using the PQC-public-key of the receiver. Sender gets the public-key of any other user by querying to the server. Each user registers his/her public-key during registration phase.
+
+For simplicity purpose you may generate the KEM key-pair of an user manually (by running a standalone C program).
+
+For any confusion you can always discuss with me.
+
+NOTE: Credit will be given on how you are optimizing performance and ensuring security against side-channel attack (private-key / session-key leak from the browser at the client-side).
+
+Deadline of Submission on GitHub:  01 Dec 2025 (Monday) Midnight
