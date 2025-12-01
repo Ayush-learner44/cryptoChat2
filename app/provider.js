@@ -7,12 +7,19 @@ export function Providers() {
         <Toaster
             position="top-right"
             toastOptions={{
+                // Default styles for all toasts
                 style: {
-                    background: "#333",
+                    background: "#4caf50",
                     color: "#fff",
+                    fontWeight: "bold",
                     borderRadius: "8px",
                     padding: "12px",
-                    fontSize: "14px",
+                },
+                success: {
+                    icon: "✅",
+                },
+                error: {
+                    style: { background: "#f44336", color: "#fff" },
                 },
             }}
         />

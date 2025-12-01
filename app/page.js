@@ -77,16 +77,8 @@ export default function HomePage() {
             const base64Key = Buffer.from(keyFileBytes).toString('base64');
             sessionStorage.setItem("chat_session_key", base64Key);
 
-            toast.success(`Welcome, ${username.trim()} 👋`, {
-                duration: 4000,
-                style: {
-                    background: "#4caf50",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    borderRadius: "8px",
-                },
-                icon: "✅",
-            });
+            toast.success(`Welcome, ${username.trim()} 👋`);
+
             router.push(`/chat?user=${username.trim()}`);
 
         } catch (e) {

@@ -6,6 +6,11 @@ import io from "socket.io-client";
 import { encryptGCM, decryptGCM, performKeyExchange, recoverSessionKey } from "../../utils/crypto";
 import ControlPanel from "./components/ControlPanel";
 import ChatWindow from "./components/ChatWindow";
+import toast from "react-hot-toast";
+
+
+
+
 import "./chat.css";
 
 export const dynamic = "force-dynamic";
@@ -169,6 +174,8 @@ function ChatPageInner() {
                 mySessionKeyRef.current = sharedSecret; // Simplify for initial connect or fetch self key
                 // Ideally fetch self key here too for symmetry, but for now just get moving:
                 setConnected(true);
+                toast.success(`Connected To ${encodeURIComponent(recipient)}`);
+
                 socketRef.current.emit("handshake_packet", { to: recipient, capsule: capsule });
             } else { alert("User keys not found"); }
         } catch (e) { console.error(e); }
@@ -243,6 +250,7 @@ function ChatPageInner() {
         if (sessionKeyRef.current) try { sessionKeyRef.current.fill(0); } catch (e) { }
         sessionKeyRef.current = null;
         setConnected(false);
+        toast.success(`${encodeURIComponent(recipient)} Disconnected!`)
         setRecipient("");
         setChat([]);
     };

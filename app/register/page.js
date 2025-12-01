@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { generateIdentity } from "../../utils/crypto";
+import toast from "react-hot-toast";
 import "./register.css";
 
 export default function RegisterPage() {
@@ -46,7 +47,12 @@ export default function RegisterPage() {
                 a.click();
                 document.body.removeChild(a);
 
-                alert(`SUCCESS!\n\nUser '${username}' registered.\nKey file downloaded.`);
+                alert(``);
+
+
+
+                toast.success(`User '${username}' registered.\nKey file downloaded ,`);
+
                 router.push("/");
             } else {
                 const data = await res.json();
