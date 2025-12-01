@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import "./home.css";
+import toast from "react-hot-toast";
 
 export default function HomePage() {
     const router = useRouter();
@@ -76,6 +77,16 @@ export default function HomePage() {
             const base64Key = Buffer.from(keyFileBytes).toString('base64');
             sessionStorage.setItem("chat_session_key", base64Key);
 
+            toast.success(`Welcome, ${username.trim()} 👋`, {
+                duration: 4000,
+                style: {
+                    background: "#4caf50",
+                    color: "#fff",
+                    fontWeight: "bold",
+                    borderRadius: "8px",
+                },
+                icon: "✅",
+            });
             router.push(`/chat?user=${username.trim()}`);
 
         } catch (e) {
